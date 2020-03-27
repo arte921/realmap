@@ -1,0 +1,13 @@
+for z = minp.z, maxp.z do
+		for x = minp.x, maxp.x do 
+			local zarg = z/mapsize * 90
+			local xarg = x/mapsize * 180
+			if math.abs(zarg) >= 85 then zarg = 0 end
+
+
+
+
+			argument = argument .. xarg .. "," .. zarg .. ","
+		end
+	end	
+	argument = argument:sub(1, #argument - 1)
