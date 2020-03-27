@@ -1,8 +1,15 @@
+file = io.open("../key.txt", "r")
+io.input(file)
+minetest.log(io.read())
+io.close(file)
+
 if sflat == nil then sflat = {} end
 sflat.options = {
 	biome = "",
 	decoration = true
 }
+
+
 
 minetest.register_on_mapgen_init(function(mgparams)
 	minetest.set_mapgen_setting("mg_name", "singlenode", true)
@@ -19,10 +26,10 @@ minetest.register_on_generated(function(minp, maxp, seed)
 
 	for z = minp.z, maxp.z do
 		for x = minp.x, maxp.x do
-			local y = math.round(math.random() * 10))
+			local y = x
 			local vi = area:index(x, y, z)
 			data[vi] = minetest.get_content_id("default:dirt_with_grass")
-			minetest.log("Mod loaded")
+			minetest.log("x=" .. x)
 		end
 	end
 	
