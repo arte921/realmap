@@ -1,7 +1,4 @@
-file = io.open("../key.txt", "r")
-io.input(file)
-minetest.log(io.read())
-io.close(file)
+dofile(minetest.get_modpath("superflat") .. "/keys.lua")
 
 if sflat == nil then sflat = {} end
 sflat.options = {
