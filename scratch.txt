@@ -1,13 +1,42 @@
-for z = minp.z, maxp.z do
-		for x = minp.x, maxp.x do 
-			local zarg = z/mapsize * 90
-			local xarg = x/mapsize * 180
-			if math.abs(zarg) >= 85 then zarg = 0 end
+	doTile(
+		minp.x,
+		maxp.x,
+		minp.z,
+		maxp.z
+	)
 
 
 
 
-			argument = argument .. xarg .. "," .. zarg .. ","
+	local mxi = 0
+	local mzi = 0
+
+	local tileSize = 31
+
+	local xtiles = math.floor(math.abs(maxp.x-minp.x)/tileSize)
+	local ztiles = math.floor(math.abs(maxp.z-minp.z)/tileSize)
+
+	for xi = 0,xtiles-2 do
+		for zi = 0,ztiles-2 do
+
+			minetest.log(xi .. "====-===-===" .. zi)
+
+			doTile(
+				minp.x + xi * tileSize,
+				minp.x + (xi + 1) * tileSize,
+				minp.z + zi * tileSize,
+				minp.z + (zi + 1) * tileSize
+			)
+			mxi = xi
+			mzi = zi
+
 		end
-	end	
-	argument = argument:sub(1, #argument - 1)
+	end
+
+	minetest.log(mxi .. "-----" .. mzi)
+
+
+				
+
+
+

@@ -41,54 +41,50 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		--minetest.log(murl)
 
 		http.fetch({url = murl,timeout = 10},function(response)
-			function doit()
-				if response["completed"] == true then 
-					minetest.log(response["data"])
+			if response["completed"] == true then 
+				minetest.log(response["data"])
 
-					local jo = minetest.parse_json(response["data"])
-					local ja = jo["resourceSets"][1]["resources"]["elevations"]
-					local k = 0
-					for x = minx, maxx do
-						for z = minz, maxz do
-							k = k + 1
-							--local y = ja[k]
-							local y = 5
+				local jo = minetest.parse_json(response["data"])
+				local ja = jo["resourceSets"][1]["resources"][1]["elevations"]
+
+				local k = 0
+				for z = maxz,minz,-1 do
+					for x = minx,maxx do
+						k = k + 1
+						if ja[k] >= minp.y and ja[k] <= maxp.y then
+							local y = ja[k]
 							local vi = area:index(x, y, z)
-							data[vi] = minetest.get_content_id("default:dirt_with_grass")
+							--data[vi] = minetest.get_content_id("default:dirt_with_grass")
+							--minetest.log("k="..k.." z="..z.." x="..x)
 						end
+
 					end
-
-					vm:set_data(data)
-					vm:set_lighting({day = 0, night = 0})
-					vm:update_liquids() 
-					vm:calc_lighting()
-					vm:write_to_map(data)
 				end
+
+				vm:set_data(data)
+				vm:set_lighting({day = 0, night = 0})
+				vm:update_liquids() 
+				vm:calc_lighting()
+				vm:write_to_map(data)
 			end
-			--local failed = pcall(doit)
-			doit()
-
-
 		end)
-
-
 	end
 
-	local pxsize = math.abs(maxp.x-minp.x)
-	local pzsize = math.abs(maxp.z-minp.z)
+	local tile = 31
+	local totalwidth = math.abs(maxp.x - minp.x)
+	local xtiles = math.floor(totalwidth/tile)
 
-	local xtile = math.floor(pxsize/30)
-	local ztile = math.floor(pzsize/30)
+	minetest.log("totalwidth " .. totalwidth .. "xtiles " .. xtiles)
 
-	for xi = 0,math.ceil(pxsize/xtile) do
-		for zi = 0,math.ceil(pzsize/ztile) do
-			pcall(doTile,
-				xtile * xi,
-				xtile * (xi+1),
-				ztile * zi,
-				ztile * (zi+1))
-		end
-	end
+	doTile(
+		minp.x,
+		minp.x + tile,
+		minp.z,
+		minp.z + tile
+	)
+
+
+
 
 
 
