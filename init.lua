@@ -1,9 +1,6 @@
 local http = minetest.request_http_api()
 
-dofile(minetest.get_modpath("realmap") .. "/keys.lua")
-
-local mapsize = 20000000
-
+dofile(minetest.get_modpath("realmap") .. "/config.lua")
 
 if sflat == nil then sflat = {} end
 sflat.options = {
@@ -47,12 +44,24 @@ minetest.register_on_generated(function(minp, maxp, seed)
 						k = k + 1
 						
 						--if ja[k] >= minp.y and ja[k] <= maxp.y then
-							local y = ja[k]
+							local y = math.floor(ja[k]/heightscale)
 
 							--minetest.log("x"..x.."z"..z.."y"..y)
 							
 							--minetest.log(y)
-							minetest.set_node({x=x,y=y,z=z},{name="default:dirt_with_grass"})
+							if y > 0 then
+								minetest.set_node({x=x,y=y,z=z},{name="default:dirt_with_grass"})
+								for d = 1,stonelayers do
+									minetest.set_node({x=x,y=y-d,z=z},{name="default:stone"})
+								end
+
+							else
+								minetest.set_node({x=x,y=y,z=z},{name="default:water_source"})
+								minetest.set_node({x=x,y=y-1,z=z},{name="default:sand"})
+								for d = 2,stonelayers do
+									minetest.set_node({x=x,y=y-d,z=z},{name="default:stone"})
+								end
+							end
 						--end
 
 					end
@@ -140,5 +149,28 @@ minetest.register_on_generated(function(minp, maxp, seed)
 
 
 end)
+
+minetest.register_chatcommand("tpll", {
+	params = "<lat> <lon>",
+	description = "Teleport to the corresponding real world location",
+	func = function(name,param)
+		local lat,lon = param:match("(.+) (.+)")
+		minetest.log(param)
+
+		local url = "http://dev.virtualearth.net/REST/v1/Elevation/List?points=" .. lat .. "," .. lon .. "&key=" .. bingApiKey
+		
+		http.fetch({url = url,timeout = 5},function(response)
+			local y = math.floor(minetest.parse_json(response["data"])["resourceSets"][1]["resources"][1]["elevations"][1]/heightscale) + 2
+			local x = lon/180*mapsize*2
+			local z = lat/90*mapsize
+
+			local player = minetest.get_player_by_name(name)
+			player:set_pos({x = x, y = y, z = z})
+		end)
+
+
+		return true, "One moment please..."
+	end,
+})
 
 
