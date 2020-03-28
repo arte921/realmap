@@ -1,39 +1,12 @@
-	doTile(
-		minp.x,
-		maxp.x,
-		minp.z,
-		maxp.z
-	)
 
 
 
-
-	local mxi = 0
-	local mzi = 0
-
-	local tileSize = 31
-
-	local xtiles = math.floor(math.abs(maxp.x-minp.x)/tileSize)
-	local ztiles = math.floor(math.abs(maxp.z-minp.z)/tileSize)
-
-	for xi = 0,xtiles-2 do
-		for zi = 0,ztiles-2 do
-
-			minetest.log(xi .. "====-===-===" .. zi)
-
-			doTile(
-				minp.x + xi * tileSize,
-				minp.x + (xi + 1) * tileSize,
-				minp.z + zi * tileSize,
-				minp.z + (zi + 1) * tileSize
-			)
-			mxi = xi
-			mzi = zi
-
-		end
+	if minp.x < -mapsize * 2 or maxp.x > mapsize * 2 or minp.z < -mapsize or maxp.z > mapsize then
+		return
 	end
 
-	minetest.log(mxi .. "-----" .. mzi)
+/grantme all
+/teleport 0 0 0
 
 
 				
