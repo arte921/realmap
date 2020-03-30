@@ -1,15 +1,8 @@
 
-
-
-	if minp.x < -mapsize * 2 or maxp.x > mapsize * 2 or minp.z < -mapsize or maxp.z > mapsize then
-		return
-	end
-
-/grantme all
-/teleport 0 0 0
-
-
+https://dev.virtualearth.net/REST/v1/Imagery/Map/AerialWithLabels?format=png&mapSize=1000,1000&mapArea=50.4,86.4,84.6,140.4&key=AqlDBlKPjKD0dpnJ1AGN0hMx-xkuK5k25Oas9ROaG14DZKgitB94518tqHK9pf4Q
 				
+/grantme all
 
+--if ja[k] >= minp.y and ja[k] <= maxp.y then
 
-
+{succeeded=true,code=200,completed=true,timeout=false,da\n�\nPNG

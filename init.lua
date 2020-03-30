@@ -1,5 +1,6 @@
 local http = minetest.request_http_api()
 
+dofile(minetest.get_modpath("realmap") .. "/pngLua/png.lua")
 dofile(minetest.get_modpath("realmap") .. "/config.lua")
 
 if sflat == nil then sflat = {} end
@@ -12,24 +13,116 @@ minetest.register_on_mapgen_init(function(mgparams)
 	minetest.set_mapgen_setting("mg_name", "singlenode", true)
 end)
 
-minetest.register_on_generated(function(minp, maxp, seed)
-	function doTile(minx,maxx,minz,maxz)
+blockArray = {}
+heightArray = {}
 
-		local lxarg = minx/mapsize/2 * 180
-		local uxarg = maxx/mapsize/2 * 180
-		local lzarg = minz/mapsize * 90
-		local uzarg = maxz/mapsize * 90
+function applyBlock(x,z,y,block)
+	--minetest.log(block)
 
-		if math.abs(lxarg) > 180 then return end
-		if math.abs(uxarg) > 180 then return end
-
-		if math.abs(lzarg) > 85 then return end
-		if math.abs(uzarg) > 85 then return end
+	minetest.set_node({x=x,y=y,z=z},{name=block})
+	minetest.set_node({x=x,y=y-1,z=z},{name="default:sand"})
+	for d = 2,stonelayers do
+		minetest.set_node({x=x,y=y-d,z=z},{name="default:stone"})
+	end
 
 
+end
 
-		local murl = "http://dev.virtualearth.net/REST/v1/Elevation/Bounds?bounds=" .. lzarg .. "," .. lxarg .. "," .. uzarg .. "," .. uxarg .. "&rows=" .. math.abs(maxz-minz)+1 .. "&cols=" .. math.abs(maxx-minx)+1 .. "&key=" .. bingApiKey 
-		--minetest.log(murl)
+function saveHeight(x,y,z)
+	--minetest.log(y)
+	if blockArray[x][z] ~= nil then
+		applyBlock(x,z,y,blockArray[x][z])
+	else
+		heightArray[x][z] = y
+	end
+end
+
+function saveBlock(x,z,block)
+	minetest.log(block)
+	if heightArray[x][z] ~= nil then
+		applyBlock(x,z,heightArray[x][z],block)
+	else
+		blockArray[x][z] = block
+	end
+end
+
+function doColorTile(minx,maxx,minz,maxz)
+
+	local lxarg = minx/mapsize/2 * 180
+	local uxarg = maxx/mapsize/2 * 180
+	local lzarg = minz/mapsize * 90
+	local uzarg = maxz/mapsize * 90
+
+	if math.abs(lxarg) > 180 then return end
+	if math.abs(uxarg) > 180 then return end
+
+	if math.abs(lzarg) > 85 then return end
+	if math.abs(uzarg) > 85 then return end
+
+	local murl = "https://dev.virtualearth.net/REST/v1/Imagery/Map/AerialWithLabels?format=png&mapSize=" .. math.abs(maxz-minz)+1 .. "," .. math.abs(maxx-minx)+1 .. "&mapArea=" .. lzarg .. "," .. lxarg .. "," .. uzarg .. "," .. uxarg .. "&key=" .. bingApiKey 
+	minetest.log(murl)
+	function dofetch()
+		http.fetch({url = murl,timeout = 10},function(response)
+
+			function doit()
+				minetest.log("-----=====helo======-----")
+				
+				img = pngImage(response["data"])
+	
+				for z = minz,maxz do
+					for x = minx,maxx do
+						local block = ""
+	
+						local r,g,b = img:getPixel(x,z)
+
+						minetest.log("------"..r.."------"..g.."-------"..b.."--------")
+	
+						if b > g then
+							block = "default:water_source"
+						else
+							block = "default:dirt_with_grass"
+						end
+
+						saveBlock(x,z,block)
+
+					end
+				end
+			end
+	
+			if minx > -mapsize * 2 and maxx < mapsize * 2 and minz > -mapsize and maxz < mapsize then
+				pcall(doit)
+			end
+		end)
+	end
+
+	function tryfetch()
+		if not pcall(dofetch) then 
+			minetest.after(math.random()*2,tryfetch)
+			minetest.log("api is probably rate-limiting")
+		 end
+	end
+
+	tryfetch()
+end
+
+function doHeightTile(minx,maxx,minz,maxz)
+
+	local lxarg = minx/mapsize/2 * 180
+	local uxarg = maxx/mapsize/2 * 180
+	local lzarg = minz/mapsize * 90
+	local uzarg = maxz/mapsize * 90
+
+	if math.abs(lxarg) > 180 then return end
+	if math.abs(uxarg) > 180 then return end
+
+	if math.abs(lzarg) > 85 then return end
+	if math.abs(uzarg) > 85 then return end
+
+
+	
+	local murl = "http://dev.virtualearth.net/REST/v1/Elevation/Bounds?bounds=" .. lzarg .. "," .. lxarg .. "," .. uzarg .. "," .. uxarg .. "&rows=" .. math.abs(maxz-minz)+1 .. "&cols=" .. math.abs(maxx-minx)+1 .. "&key=" .. bingApiKey 
+	
+	function dofetch()
 		http.fetch({url = murl,timeout = 10},function(response)
 
 			function doit() 
@@ -42,49 +135,38 @@ minetest.register_on_generated(function(minp, maxp, seed)
 				for z = minz,maxz do
 					for x = minx,maxx do
 						k = k + 1
-						
-						--if ja[k] >= minp.y and ja[k] <= maxp.y then
-							local y = math.floor(ja[k]/heightscale)
-
-							--minetest.log("x"..x.."z"..z.."y"..y)
-							
-							--minetest.log(y)
-							if y > 0 then
-								minetest.set_node({x=x,y=y,z=z},{name="default:dirt_with_grass"})
-								for d = 1,stonelayers do
-									minetest.set_node({x=x,y=y-d,z=z},{name="default:stone"})
-								end
-
-							else
-								minetest.set_node({x=x,y=y,z=z},{name="default:water_source"})
-								minetest.set_node({x=x,y=y-1,z=z},{name="default:sand"})
-								for d = 2,stonelayers do
-									minetest.set_node({x=x,y=y-d,z=z},{name="default:stone"})
-								end
-							end
-						--end
-
+						local y = math.floor(ja[k]/heightscale)
+						saveHeight(x,y,z)					
 					end
 				end
 			end
 
-			function tryit()
-				if not pcall(doit) then 
-					minetest.after(math.random()*2,tryit)
-					minetest.log("api is rate-limiting")
-				 end
-			end
-
 			if minx > -mapsize * 2 and maxx < mapsize * 2 and minz > -mapsize and maxz < mapsize then
-				tryit()
-			end
-			
+				pcall(doit)
+			end			
 
 		end)
 	end
 
+	function tryfetch()
+		if not pcall(dofetch) then 
+			minetest.after(math.random()*2,tryfetch)
+			minetest.log("api is probably rate-limiting")
+		 end
+	end
+
+	tryfetch()
+end
+
+minetest.register_on_generated(function(minp, maxp, seed)
+	for z = minp.z,maxp.z do
+		blockArray[z] = {}
+		heightArray[z] = {}
+	end
+
 	local tile = 31
 	local totalwidth = math.abs(maxp.x - minp.x)
+	local totalheight = math.abs(maxp.z - minp.z)
 	local xtiles = math.floor(totalwidth/tile)
 
 	local mxi = 0
@@ -99,28 +181,23 @@ minetest.register_on_generated(function(minp, maxp, seed)
 
 		for xi = 0,xtiles-1 do
 			for zi = 0,ztiles-1 do
-				doTile(
+				doHeightTile(
 					minp.x + xi * tileSize,
 					minp.x + (xi + 1) * tileSize,
 					minp.z + zi * tileSize,
 					minp.z + (zi + 1) * tileSize
 				)
 			end
-		end
-
-		for xi = 0,xtiles-1 do
-			for zi = 0,ztiles-1 do
-				doTile(
-					minp.x + xi * tileSize,
-					minp.x + (xi + 1) * tileSize,
-					minp.z + ztiles * tileSize,
-					maxp.z
-				)
-			end
+			doHeightTile(
+				minp.x + xi * tileSize,
+				minp.x + (xi + 1) * tileSize,
+				minp.z + ztiles * tileSize,
+				maxp.z
+			)
 		end
 
 		for zi = 0,ztiles-1 do
-			doTile(
+			doHeightTile(
 				minp.x + xtiles * tileSize,
 				maxp.x,
 				minp.z + zi * tileSize,
@@ -128,7 +205,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 			)
 		end
 
-		doTile(
+		doHeightTile(
 			minp.x + xtiles * tileSize,
 			maxp.x,
 			minp.z + ztiles * tileSize,
@@ -136,7 +213,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		)
 
 	else
-		doTile(
+		doHeightTile(
 			minp.x,
 			maxp.x,
 			minp.z,
@@ -145,8 +222,56 @@ minetest.register_on_generated(function(minp, maxp, seed)
 
 	end
 
+	local xpixels = 80 --2000
+	local zpixels = 80 --1500
 
+	local ximages = math.floor(math.abs(maxp.x-minp.x)/xpixels)
+	local zimages = math.floor(math.abs(maxp.z-minp.z)/zpixels)
 
+	if totalwidth >= xpixels or totalheight >= zpixels then
+
+		for xi = 0,ximages-1 do
+			for zi = 0,zimages-1 do
+				doColorTile(
+					minp.x + xi * xpixels,
+					minp.x + (xi + 1) * xpixels,
+					minp.z + zi * zpixels,
+					minp.z + (zi + 1) * zpixels
+				)
+			end
+			doColorTile(
+				minp.x + xi * xpixels,
+				minp.x + (xi + 1) * xpixels,
+				minp.z + zimages * zpixels,
+				maxp.z
+			)
+		end
+
+		for zi = 0,zimages-1 do
+			doColorTile(
+				minp.x + ximages * xpixels,
+				maxp.x,
+				minp.z + zi * zpixels,
+				minp.z + (zi + 1) * zpixels
+			)
+		end
+
+		doColorTile(
+			minp.x + xtiles * xpixels,
+			maxp.x,
+			minp.z + ztiles * zpixels,
+			maxp.z
+		)
+
+	else
+		doColorTile(
+			minp.x,
+			maxp.x,
+			minp.z,
+			maxp.z
+		)
+
+	end
 
 end)
 
