@@ -65,17 +65,22 @@ function doColorTile(minx,maxx,minz,maxz)
 		http.fetch({url = murl,timeout = 10},function(response)
 
 			function doit()
-				minetest.log("-----=====helo======-----")
+				minetest.log("minz="..minz)
+				minetest.log("maxz="..maxz)
+				minetest.log("minx="..minx)
+				minetest.log("maxx="..maxx)
 				
-				img = pngImage(response["data"])
+				img = pngImage(response["data"])				
 	
 				for z = minz,maxz do
 					for x = minx,maxx do
+						
 						local block = ""
-	
-						local r,g,b = img:getPixel(x,z)
+							
+						local px = img:getPixel(x-minx+1,z-minz+1))
 
-						minetest.log("------"..r.."------"..g.."-------"..b.."--------")
+						local b = px["B"]
+						local g = px["G"]						
 	
 						if b > g then
 							block = "default:water_source"
@@ -90,7 +95,7 @@ function doColorTile(minx,maxx,minz,maxz)
 			end
 	
 			if minx > -mapsize * 2 and maxx < mapsize * 2 and minz > -mapsize and maxz < mapsize then
-				pcall(doit)
+				doit()
 			end
 		end)
 	end
@@ -159,9 +164,9 @@ function doHeightTile(minx,maxx,minz,maxz)
 end
 
 minetest.register_on_generated(function(minp, maxp, seed)
-	for z = minp.z,maxp.z do
-		blockArray[z] = {}
-		heightArray[z] = {}
+	for x = minp.x,maxp.x do
+		blockArray[x] = {}
+		heightArray[x] = {}
 	end
 
 	local tile = 31
