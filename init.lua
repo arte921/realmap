@@ -17,19 +17,14 @@ blockArray = {}
 heightArray = {}
 
 function applyBlock(x,z,y,block)
-	--minetest.log(block)
-
 	minetest.set_node({x=x,y=y,z=z},{name=block})
 	minetest.set_node({x=x,y=y-1,z=z},{name="default:sand"})
 	for d = 2,stonelayers do
 		minetest.set_node({x=x,y=y-d,z=z},{name="default:stone"})
 	end
-
-
 end
 
 function saveHeight(x,y,z)
-	--minetest.log(y)
 	if blockArray[x][z] ~= nil then
 		applyBlock(x,z,y,blockArray[x][z])
 	else
@@ -38,7 +33,6 @@ function saveHeight(x,y,z)
 end
 
 function saveBlock(x,z,block)
-	minetest.log(block)
 	if heightArray[x][z] ~= nil then
 		applyBlock(x,z,heightArray[x][z],block)
 	else
@@ -64,12 +58,7 @@ function doColorTile(minx,maxx,minz,maxz)
 	function dofetch()
 		http.fetch({url = murl,timeout = 10},function(response)
 
-			function doit()
-				minetest.log("minz="..minz)
-				minetest.log("maxz="..maxz)
-				minetest.log("minx="..minx)
-				minetest.log("maxx="..maxx)
-				
+			function doit()				
 				img = pngImage(response["data"])				
 	
 				for z = minz,maxz do
@@ -77,7 +66,7 @@ function doColorTile(minx,maxx,minz,maxz)
 						
 						local block = ""
 							
-						local px = img:getPixel(x-minx+1,z-minz+1))
+						local px = img:getPixel(x-minx+1,z-minz+1)
 
 						local b = px["B"]
 						local g = px["G"]						
@@ -262,9 +251,9 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		end
 
 		doColorTile(
-			minp.x + xtiles * xpixels,
+			minp.x + ximages * xpixels,
 			maxp.x,
-			minp.z + ztiles * zpixels,
+			minp.z + zimages * zpixels,
 			maxp.z
 		)
 
