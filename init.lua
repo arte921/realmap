@@ -3,12 +3,6 @@ local http = minetest.request_http_api()
 dofile(minetest.get_modpath("realmap") .. "/pngLua/png.lua")
 dofile(minetest.get_modpath("realmap") .. "/config.lua")
 
-if sflat == nil then sflat = {} end
-sflat.options = {
-	biome = "",
-	decoration = true
-}
-
 minetest.register_on_mapgen_init(function(mgparams)
 	minetest.set_mapgen_setting("mg_name", "singlenode", true)
 end)
@@ -42,49 +36,42 @@ end
 
 function doColorTile(minx,maxx,minz,maxz)
 
-	local lxarg = minx/mapsize/2 * 180
-	local uxarg = maxx/mapsize/2 * 180
-	local lzarg = minz/mapsize * 90
-	local uzarg = maxz/mapsize * 90
+	local lxarg = minx/mapsize * 180
+	local uxarg = maxx/mapsize * 180
+	local lzarg = minz/(mapsize/2) * 90
+	local uzarg = maxz/(mapsize/2) * 90
 
 	if math.abs(lxarg) > 180 then return end
 	if math.abs(uxarg) > 180 then return end
 
-	if math.abs(lzarg) > 85 then return end
-	if math.abs(uzarg) > 85 then return end
+	if math.abs(lzarg) > 90 then return end
+	if math.abs(uzarg) > 90 then return end
 
-	local murl = "https://dev.virtualearth.net/REST/v1/Imagery/Map/AerialWithLabels?format=png&mapSize=" .. math.abs(maxz-minz)+1 .. "," .. math.abs(maxx-minx)+1 .. "&mapArea=" .. lzarg .. "," .. lxarg .. "," .. uzarg .. "," .. uxarg .. "&key=" .. bingApiKey 
+	local murl = "https://dev.virtualearth.net/REST/v1/Imagery/Map/Aerial?format=png&mapSize=" .. math.abs(maxz-minz)+1 .. "," .. math.abs(maxx-minx)+1 .. "&mapArea=" .. lzarg .. "," .. lxarg .. "," .. uzarg .. "," .. uxarg .. "&key=" .. bingApiKey 
 	minetest.log(murl)
 	function dofetch()
 		http.fetch({url = murl,timeout = 10},function(response)
-
-			function doit()				
-				img = pngImage(response["data"])				
+			img = pngImage(response["data"])				
 	
-				for z = minz,maxz do
-					for x = minx,maxx do
+			for z = minz,maxz do
+				for x = minx,maxx do
+					
+					local block = ""
 						
-						local block = ""
-							
-						local px = img:getPixel(x-minx+1,z-minz+1)
+					local px = img:getPixel(x-minx+1,maxz-z+1)
 
-						local b = px["B"]
-						local g = px["G"]						
-	
-						if b > g then
-							block = "default:water_source"
-						else
-							block = "default:dirt_with_grass"
-						end
+					local b = px["B"]
+					local g = px["G"]						
 
-						saveBlock(x,z,block)
-
+					if b > g then
+						block = "default:water_source"
+					else
+						block = "default:dirt_with_grass"
 					end
+
+					saveBlock(x,z,block)
+
 				end
-			end
-	
-			if minx > -mapsize * 2 and maxx < mapsize * 2 and minz > -mapsize and maxz < mapsize then
-				doit()
 			end
 		end)
 	end
@@ -95,16 +82,16 @@ function doColorTile(minx,maxx,minz,maxz)
 			minetest.log("api is probably rate-limiting")
 		 end
 	end
-
+	
 	tryfetch()
 end
 
 function doHeightTile(minx,maxx,minz,maxz)
 
-	local lxarg = minx/mapsize/2 * 180
-	local uxarg = maxx/mapsize/2 * 180
-	local lzarg = minz/mapsize * 90
-	local uzarg = maxz/mapsize * 90
+	local lxarg = minx/mapsize * 180
+	local uxarg = maxx/mapsize * 180
+	local lzarg = minz/(mapsize/2) * 90
+	local uzarg = maxz/(mapsize/2) * 90
 
 	if math.abs(lxarg) > 180 then return end
 	if math.abs(uxarg) > 180 then return end
@@ -112,15 +99,12 @@ function doHeightTile(minx,maxx,minz,maxz)
 	if math.abs(lzarg) > 85 then return end
 	if math.abs(uzarg) > 85 then return end
 
-
-	
 	local murl = "http://dev.virtualearth.net/REST/v1/Elevation/Bounds?bounds=" .. lzarg .. "," .. lxarg .. "," .. uzarg .. "," .. uxarg .. "&rows=" .. math.abs(maxz-minz)+1 .. "&cols=" .. math.abs(maxx-minx)+1 .. "&key=" .. bingApiKey 
-	
+	--minetest.log(murl)
 	function dofetch()
 		http.fetch({url = murl,timeout = 10},function(response)
 
 			function doit() 
-				--minetest.log(response["data"])
 
 				local jo = minetest.parse_json(response["data"])
 				local ja = jo["resourceSets"][1]["resources"][1]["elevations"]
@@ -158,116 +142,124 @@ minetest.register_on_generated(function(minp, maxp, seed)
 		heightArray[x] = {}
 	end
 
-	local tile = 31
-	local totalwidth = math.abs(maxp.x - minp.x)
-	local totalheight = math.abs(maxp.z - minp.z)
-	local xtiles = math.floor(totalwidth/tile)
+	local checkx = math.floor((minp.x+maxp.x)/2)
+	local checkz = math.floor((minp.z+maxp.z)/2)
+	local checkname = minetest.get_node({x=checkx,y=minetest.get_spawn_level(checkx,checkz)-2,z=checkz})["name"]
 
-	local mxi = 0
-	local mzi = 0
+	minetest.log(checkname)
 
-	local tileSize = 30
+	if checkname == "air" or checkname == "ignore" then
+		local tile = 31
+		local totalwidth = math.abs(maxp.x - minp.x)
+		local totalheight = math.abs(maxp.z - minp.z)
+		local xtiles = math.floor(totalwidth/tile)
 
-	local xtiles = math.floor(math.abs(maxp.x-minp.x)/tileSize)
-	local ztiles = math.floor(math.abs(maxp.z-minp.z)/tileSize)
+		local mxi = 0
+		local mzi = 0
 
-	if math.sqrt(2) * mapsize > tileSize then
+		local tileSize = 30
 
-		for xi = 0,xtiles-1 do
-			for zi = 0,ztiles-1 do
+		local xtiles = math.floor(math.abs(maxp.x-minp.x)/tileSize)
+		local ztiles = math.floor(math.abs(maxp.z-minp.z)/tileSize)
+
+		if math.sqrt(2) * mapsize > tileSize then
+
+			for xi = 0,xtiles-1 do
+				for zi = 0,ztiles-1 do
+					doHeightTile(
+						minp.x + xi * tileSize,
+						minp.x + (xi + 1) * tileSize,
+						minp.z + zi * tileSize,
+						minp.z + (zi + 1) * tileSize
+					)
+				end
 				doHeightTile(
 					minp.x + xi * tileSize,
 					minp.x + (xi + 1) * tileSize,
+					minp.z + ztiles * tileSize,
+					maxp.z
+				)
+			end
+
+			for zi = 0,ztiles-1 do
+				doHeightTile(
+					minp.x + xtiles * tileSize,
+					maxp.x,
 					minp.z + zi * tileSize,
 					minp.z + (zi + 1) * tileSize
 				)
 			end
-			doHeightTile(
-				minp.x + xi * tileSize,
-				minp.x + (xi + 1) * tileSize,
-				minp.z + ztiles * tileSize,
-				maxp.z
-			)
-		end
 
-		for zi = 0,ztiles-1 do
 			doHeightTile(
 				minp.x + xtiles * tileSize,
 				maxp.x,
-				minp.z + zi * tileSize,
-				minp.z + (zi + 1) * tileSize
+				minp.z + ztiles * tileSize,
+				maxp.z
 			)
+
+		else
+			doHeightTile(
+				minp.x,
+				maxp.x,
+				minp.z,
+				maxp.z
+			)
+
 		end
 
-		doHeightTile(
-			minp.x + xtiles * tileSize,
-			maxp.x,
-			minp.z + ztiles * tileSize,
-			maxp.z
-		)
+		local xpixels = 2000
+		local zpixels = 1500
 
-	else
-		doHeightTile(
-			minp.x,
-			maxp.x,
-			minp.z,
-			maxp.z
-		)
+		local ximages = math.floor(math.abs(maxp.x-minp.x)/xpixels)
+		local zimages = math.floor(math.abs(maxp.z-minp.z)/zpixels)
 
-	end
+		if totalwidth >= xpixels or totalheight >= zpixels then
 
-	local xpixels = 80 --2000
-	local zpixels = 80 --1500
-
-	local ximages = math.floor(math.abs(maxp.x-minp.x)/xpixels)
-	local zimages = math.floor(math.abs(maxp.z-minp.z)/zpixels)
-
-	if totalwidth >= xpixels or totalheight >= zpixels then
-
-		for xi = 0,ximages-1 do
-			for zi = 0,zimages-1 do
+			for xi = 0,ximages-1 do
+				for zi = 0,zimages-1 do
+					doColorTile(
+						minp.x + xi * xpixels,
+						minp.x + (xi + 1) * xpixels,
+						minp.z + zi * zpixels,
+						minp.z + (zi + 1) * zpixels
+					)
+				end
 				doColorTile(
 					minp.x + xi * xpixels,
 					minp.x + (xi + 1) * xpixels,
+					minp.z + zimages * zpixels,
+					maxp.z
+				)
+			end
+
+			for zi = 0,zimages-1 do
+				doColorTile(
+					minp.x + ximages * xpixels,
+					maxp.x,
 					minp.z + zi * zpixels,
 					minp.z + (zi + 1) * zpixels
 				)
 			end
-			doColorTile(
-				minp.x + xi * xpixels,
-				minp.x + (xi + 1) * xpixels,
-				minp.z + zimages * zpixels,
-				maxp.z
-			)
-		end
 
-		for zi = 0,zimages-1 do
 			doColorTile(
 				minp.x + ximages * xpixels,
 				maxp.x,
-				minp.z + zi * zpixels,
-				minp.z + (zi + 1) * zpixels
+				minp.z + zimages * zpixels,
+				maxp.z
 			)
+
+		else
+			doColorTile(
+				minp.x,
+				maxp.x,
+				minp.z,
+				maxp.z
+			)
+
 		end
-
-		doColorTile(
-			minp.x + ximages * xpixels,
-			maxp.x,
-			minp.z + zimages * zpixels,
-			maxp.z
-		)
-
-	else
-		doColorTile(
-			minp.x,
-			maxp.x,
-			minp.z,
-			maxp.z
-		)
-
 	end
-
 end)
+
 
 minetest.register_chatcommand("tpll", {
 	params = "<lat> <lon>",
@@ -292,4 +284,23 @@ minetest.register_chatcommand("tpll", {
 	end,
 })
 
+minetest.register_chatcommand("getarrays", {
+	params = "",
+	description = "",
+	func = function(name)
+		
+		local player = minetest.get_player_by_name(name)
+
+		local playerx = math.floor(player:getpos()["x"])
+		local playerz = math.floor(player:getpos()["z"])
+		minetest.log(playerx.." "..playerz)
+
+		local whatsnil = ""
+
+		if heightArray[playerx][playerz] == nil then whatsnil = whatsnil.."heightarray" end
+		if blockArray[playerx][playerz] == nil then whatsnil = whatsnil.."blockarray" end
+
+		return true, whatsnil
+	end,
+})
 

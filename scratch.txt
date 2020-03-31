@@ -5,4 +5,11 @@ https://dev.virtualearth.net/REST/v1/Imagery/Map/AerialWithLabels?format=png&map
 
 --if ja[k] >= minp.y and ja[k] <= maxp.y then
 
-{succeeded=true,code=200,completed=true,timeout=false,da\n�\nPNG
+
+if ~isDoneArray[minx][minz] or ~isDoneArray[minx][maxz] or ~isDoneArray[maxx][minz] or ~isDoneArray[maxx][maxz] then
+
+
+minetest.get_spawn_level(x, z)
+
+
+if ~isDoneArray[minx][minz] or ~isDoneArray[minx][maxz] or ~isDoneArray[maxx][minz] or ~isDoneArray[maxx][maxz] then
